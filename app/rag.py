@@ -36,7 +36,7 @@ class RAGSystem:
         if not all_chunks:
             logger.warning("No chunks loaded, creating empty index")
             return FAISS.from_texts([""], self.embedding_model)
-
+        
         texts = [chunk["text"] for chunk in all_chunks]
         metadatas = [{"source": chunk["source"]} for chunk in all_chunks]
 
@@ -47,14 +47,14 @@ class RAGSystem:
         except:
             vectorstore = FAISS.from_texts(texts, self.embedding_model, metadatas=metadatas)
             logger.info("Created new FAISS index")
-
+            
         return vectorstore
 
-    def query(self, question: str) -> str:
+    def query(self, question: str):
         cached = get_cached_response(question)
         if cached:
             return cached
-
+        
         retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
         docs = retriever.get_relevant_documents(question)
         chunk_texts = [doc.page_content for doc in docs]
@@ -76,5 +76,3 @@ class RAGSystem:
         metadatas = [{"source": chunk["source"]} for chunk in chunks_with_meta]
         self.vectorstore.add_texts(texts, metadatas=metadatas)
         self.vectorstore.save_local("./faiss_index")
-
-#git lfs (large file system)

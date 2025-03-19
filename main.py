@@ -8,7 +8,7 @@ from app.rag import RAGSystem
 app = FastAPI()
 
 UPLOAD_DIR = Path("data")
-os.makedirs(UPLOAD_DIR, exist_ok = True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/upload-sds/")
 async def upload_sds(files: List[UploadFile] = File(...)):
@@ -27,31 +27,18 @@ async def submit_url(url: str = Query(...)):
     return {"url": url}
 
 @app.post("/query/")
-async def query_rag(
-    question: str = Query(...),
-    sds_paths: Optional[List[str]] = Query(None)
-):
+async def query_rag(question: str = Query(...), sds_paths: Optional[List[str]] = Query(None)):
     print(f"Received sds_paths: {sds_paths}")
-
     if not sds_paths:
         sds_paths = [str(f) for f in UPLOAD_DIR.glob("*.pdf")]
         if not sds_paths:
-            raise HTTPException(status_code = 400, detail = "No SDS files available. Upload files or submit URLs first.")
-
+            raise HTTPException(status_code=400, detail="No SDS files available. Upload files or submit URLs first.")
     for path in sds_paths:
         if not os.path.exists(path):
-            raise HTTPException(status_code = 404, detail = f"File not found: {path}")
-
+            raise HTTPException(status_code=404, detail=f"File not found: {path}")
     rag_system = RAGSystem(sds_paths)
     answer = rag_system.query(question)
-    return {"question": question, 
-            "answer": answer}
+    return {"question": question, "answer": answer}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host = "0.0.0.0", port = 8000)
-
-
-# pydantic
-# how to create python modules 
-# conda environment
-# pipreqs, pipgar, poetry
+    uvicorn.run(app, host="0.0.0.0", port=8000)

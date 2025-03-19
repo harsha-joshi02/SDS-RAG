@@ -1,6 +1,6 @@
 cache = {}
 
-def get_cached_response(query: str) -> str:
+def get_cached_response(query: str):
     return cache.get(query)
 
 def set_cached_response(query: str, response: str):
