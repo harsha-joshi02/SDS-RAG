@@ -48,10 +48,11 @@ BM25 reranks results, and the LLM generates a response.<br>
 
 # API Endpoints
 
-Method	Endpoint	    Description <br>
-POST	/upload-sds/	Upload PDFs/DOCX files for indexing <br>
-POST	/submit-url/	Submit a URL for content extraction <br>
-POST	/query/	        Ask a question based on uploaded/processed content <br>
+|Method	| Endpoint	    | Description <br>                                       |
+|-------|---------------|--------------------------------------------------------|
+|POST	| /upload-sds/	| Upload PDFs/DOCX files for indexing <br>               |
+|POST	| /submit-url/	| Submit a URL for content extraction <br>               |
+|POST	| /query/	    | Ask a question based on uploaded/processed content <br>|
 
 
 # Dependencies
