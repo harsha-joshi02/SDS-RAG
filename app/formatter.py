@@ -1,5 +1,12 @@
-from typing import List
+def format_response(answer, chunks, metadatas):
 
-def format_response(response: str, chunks: List[str], metadatas: List[dict]):
-    citations = "\n".join([f"[Doc {i+1}] ({meta['source']}): {chunk[:50]}..." for i, (chunk, meta) in enumerate(zip(chunks, metadatas))])
-    return f"{response}\n\n**Sources:**\n{citations}"
+    print("Chunk Metadatas:", metadatas)
+
+    citations = "\n".join([
+        f"[Doc {i+1}] ({meta.get('source', 'Unknown Source')}): {chunk[:50]}..."
+        for i, (chunk, meta) in enumerate(zip(chunks, metadatas))
+    ])
+
+    formatted_response = f"Answer: {answer}\n\nCitations:\n{citations}" if citations else answer
+
+    return formatted_response

@@ -13,7 +13,7 @@ __pycache__/
 default.sqlite  
 
 # FAISS Index (Avoid storing large indices in Git)  
-faiss_index/  
+faiss_index/
 
 # OS-Specific & IDE Files  
 .DS_Store  
