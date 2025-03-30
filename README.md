@@ -1,10 +1,5 @@
 # SDS-RAG: Retrieval-Augmented Generation System
-SDS-RAG is a Retrieval-Augmented Generation (RAG) system that processes documents (PDF, DOCX) and URLs, retrieves relevant information, and answers user queries using a Large Language Model (LLM).
-
-1. Document Upload: Extracts and indexes content from PDFs and DOCX files
-2. Web Search Integration: Retrieves content from URLs using the Tavily API
-3. Efficient Retrieval: Uses FAISS for vector storage and BM25 for reranking
-4. LLM-Powered Responses: Generates responses based on retrieved documents
+SDS-RAG is a Retrieval-Augmented Generation (RAG) system that processes documents (PDF, DOCX) and URLs, retrieves relevant information, and answers user queries using a Large Language Model.
 
 
 # Installation and Setup
