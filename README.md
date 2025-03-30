@@ -6,7 +6,7 @@ SDS-RAG is a Retrieval-Augmented Generation (RAG) system that processes document
 
 1. Clone the Repository <br>
 git clone https://github.com/your-username/your-repo.git <br>
-cd your-repo <br>
+cd repo <br>
 
 2. Set Up a Virtual Environment <br>
 python3 -m venv venv <br>
@@ -16,15 +16,15 @@ source venv/bin/activate <br>
 pip install -r requirements.txt <br>
 
 4. Set Up Environment Variables <br>
-Create a .env file and add your Tavily API key: <br>
+Create a .env file and add your TAVILY_API_KEY: <br>
 
 
 # Running the System
 
-Open Terminal <br>
+1. Open Terminal <br>
 python main.py <br>
 
-Open 2nd Terminal <br>
+2. Open 2nd Terminal <br>
 streamlit run frontend.py <br>
 
 
@@ -32,10 +32,10 @@ streamlit run frontend.py <br>
 
 1. Upload Documents <br>
 Select PDFs or DOCX files and upload them. <br>
-The system extracts text and indexes it using FAISS. <br>
+The system extracts text and indexes it using FAISS. <br><br>
 2. Submit a URL <br>
 Enter a website URL, and the system fetches its content. <br>
-The retrieved text is indexed for future queries.<br>
+The retrieved text is indexed for future queries.<br><br>
 3. Query the System <br>
 Ask a question, and the system retrieves relevant chunks.<br>
 BM25 reranks results, and the LLM generates a response.<br>

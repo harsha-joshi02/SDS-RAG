@@ -21,7 +21,7 @@ def rerank_chunks(chunks: List[str], query: str, k: int = 3):
 
     scores = np.array(scores)
     if scores.max() > 0:
-        scores = scores / scores.max()  # Normalize between 0 and 1
+        scores = scores / scores.max()
 
     top_indices = np.argsort(scores)[::-1][:k]
     top_chunks = [chunks[i] for i in top_indices]

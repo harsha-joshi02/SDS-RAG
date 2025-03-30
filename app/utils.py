@@ -19,7 +19,6 @@ def load_sds(file_path: str):
         for para in doc.paragraphs:
             text += para.text + "\n"
 
-        # Extract tables
         for table in doc.tables:
             for row in table.rows:
                 row_text = " | ".join(cell.text.strip() for cell in row.cells)
@@ -34,13 +33,12 @@ def load_sds(file_path: str):
 
 def preprocess_text(text: str):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,  # Increased to prevent splitting tables badly
+        chunk_size=300, 
         chunk_overlap=50,
         separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""]
     )
     chunks = text_splitter.split_text(text)
     
-    # Ensure at least one chunk exists
     if not chunks and text.strip():
         chunks = [text.strip()]
     
