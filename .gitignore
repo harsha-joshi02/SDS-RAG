@@ -1,4 +1,20 @@
-venv/
-*.dylib
-__pycache__/
-.DS_Store
+# Virtual Environment  
+venv/  
+
+# Python Cache & Compiled Files  
+__pycache__/  
+*.pyc  
+*.pyo  
+
+# Environment Variables (API Keys & Secrets)  
+.env  
+
+# SQLite Database (Avoid storing local DB in Git)  
+default.sqlite  
+
+# FAISS Index (Avoid storing large indices in Git)  
+faiss_index/  
+
+# OS-Specific & IDE Files  
+.DS_Store  
+*.log  

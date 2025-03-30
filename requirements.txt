@@ -10,3 +10,6 @@ tavily-python
 sentence-transformers
 faiss-cpu
 redis
+rank_bm25
+python-dotenv
+python-docx
