@@ -15,7 +15,7 @@ def load_sds(file_path: str):
             text += page.extract_text() or ""
 
     elif file_path.lower().endswith('.docx'):
-        doc = Document(file_path)
+        doc = Document(file_path)   
         for para in doc.paragraphs:
             text += para.text + "\n"
 
@@ -35,7 +35,7 @@ def preprocess_text(text: str):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=300, 
         chunk_overlap=50,
-        separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""]
+        separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""] # Try different combonations/ and without separator
     )
     chunks = text_splitter.split_text(text)
     

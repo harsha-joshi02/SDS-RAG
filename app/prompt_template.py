@@ -14,5 +14,5 @@ prompt_template = PromptTemplate(
         "**Context:**\n{retrieved_documents}\n\n"
         "**User Query:** {query}\n\n"
         "**Answer:**"
-    ),
+    ),  
 )
