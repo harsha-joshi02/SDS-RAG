@@ -2,7 +2,7 @@ from typing import List
 from rank_bm25 import BM25Okapi
 import numpy as np
 
-def rerank_chunks(chunks: List[str], query: str, k: int = 3):
+def rerank_chunks(chunks: List[str], query: str, k: int = 5):
     if not chunks:
         print("Warning: No chunks retrieved for reranking.")
         return []

@@ -13,3 +13,4 @@ redis
 rank_bm25
 python-dotenv
 python-docx
+pdfplumber

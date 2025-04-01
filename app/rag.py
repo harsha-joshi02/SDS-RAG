@@ -59,16 +59,16 @@ class RAGSystem:
         if cached:
             return cached
 
-        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
 
         docs = retriever.get_relevant_documents(question)
         chunk_texts = [doc.page_content for doc in docs]
         chunk_metadatas = [doc.metadata for doc in docs]
 
-        if not chunk_texts:
+        reranked_chunks = rerank_chunks(chunk_texts, question)  
+        if not reranked_chunks:
             return "The answer is not present in the given documents."
 
-        reranked_chunks = rerank_chunks(chunk_texts, question)
         context = "\n".join(reranked_chunks)
 
         formatted_prompt = prompt_template.format(
@@ -86,21 +86,27 @@ class RAGSystem:
 
         return formatted_answer
 
+
     def add_document(self, text: str):
         start_time = time.time()
         print(f"Adding document, text length: {len(text)}")
+    
         chunks = preprocess_text(text)
         print(f"Chunks created: {len(chunks)}")
+
         if not chunks:
             logger.warning("No chunks created from document")
             return
+
         chunks_with_meta = [{"text": chunk, "source": "web_content"} for chunk in chunks]
         texts = [chunk["text"] for chunk in chunks_with_meta]
         metadatas = [{"source": chunk["source"]} for chunk in chunks_with_meta]
+
         print(f"Adding {len(texts)} chunks to vectorstore")
         self.vectorstore.add_texts(texts, metadatas=metadatas)
+
+        self.vectorstore.save_local("./faiss_index")
 
         end_time = time.time()
         print(f"FAISS Indexing Time: {end_time - start_time:.2f} sec")
         logger.info(f"Loaded web_content with {len(chunks)} chunks")
-        self.vectorstore.save_local("./faiss_index")
