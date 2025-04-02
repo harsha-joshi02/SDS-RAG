@@ -15,7 +15,6 @@ def load_sds(file_path: str):
             for page in pdf.pages:
                 text += (page.extract_text() or "") + "\n"
 
-                # Extract tables
                 tables = page.extract_tables()
                 for table in tables:
                     for row in table:
@@ -24,7 +23,7 @@ def load_sds(file_path: str):
     elif file_path.lower().endswith('.docx'):
         doc = Document(file_path)
         for para in doc.paragraphs:
-            if para.text.strip():  # Avoid adding empty lines
+            if para.text.strip(): 
                 text += para.text.strip() + "\n"
 
         for table in doc.tables:
@@ -43,7 +42,6 @@ def preprocess_text(text: str):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=800, 
         chunk_overlap=100,
-        # separators=["\n\n", "\n", ".", "!", "?", ",", " ", "|"] 
     )
     chunks = text_splitter.split_text(text)
 
@@ -51,3 +49,8 @@ def preprocess_text(text: str):
         chunks = [text.strip()]
     
     return chunks   
+
+# urls
+# makefile
+# groq
+# follow-up
