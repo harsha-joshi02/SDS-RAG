@@ -2,6 +2,7 @@ from typing import List
 import os
 import time
 import logging
+import json
 from langchain_ollama import ChatOllama
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -11,7 +12,8 @@ from app.reranker import rerank_chunks
 from app.formatter import format_response
 from app.prompt_template import prompt_template
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class RAGSystem:
@@ -21,14 +23,14 @@ class RAGSystem:
         self.embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
         if os.path.exists("./faiss_index"):
-            print("Loading existing FAISS index...")
+            logger.info("Loading existing FAISS index...")
             self.vectorstore = FAISS.load_local(
-                "./faiss_index", 
-                self.embedding_model, 
-                allow_dangerous_deserialization=True  
+                "./faiss_index",
+                self.embedding_model,
+                allow_dangerous_deserialization=True
             )
         else:
-            print("No FAISS index found, creating a new one...")
+            logger.info("No FAISS index found, creating a new one...")
             self.vectorstore = self._load_and_index_sds()
 
     def _load_and_index_sds(self):
@@ -57,6 +59,7 @@ class RAGSystem:
         start_time = time.time()
         cached = get_cached_response(question)
         if cached:
+            logger.info("Using cached response")
             return cached
 
         retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
@@ -64,9 +67,15 @@ class RAGSystem:
         docs = retriever.get_relevant_documents(question)
         chunk_texts = [doc.page_content for doc in docs]
         chunk_metadatas = [doc.metadata for doc in docs]
+        
+        logger.info(f"Retrieved {len(docs)} documents")
+        
+        for i, doc in enumerate(docs[:3]):
+            logger.info(f"Document {i+1} preview: {doc.page_content[:100]}...")
 
-        reranked_chunks = rerank_chunks(chunk_texts, question)  
+        reranked_chunks = rerank_chunks(chunk_texts, question)
         if not reranked_chunks:
+            logger.warning("No relevant chunks found after reranking")
             return "The answer is not present in the given documents."
 
         context = "\n".join(reranked_chunks)
@@ -75,9 +84,10 @@ class RAGSystem:
             retrieved_documents=context, query=question
         )
 
+        logger.info(f"Sending prompt to LLM, length: {len(formatted_prompt)}")
         result = self.llm.invoke(formatted_prompt)
         end_time = time.time()
-        print(f"Total Query Time: {end_time - start_time:.2f} sec")
+        logger.info(f"Total Query Time: {end_time - start_time:.2f} sec")
 
         answer = result.content
         formatted_answer = format_response(answer, reranked_chunks, chunk_metadatas)
@@ -86,14 +96,30 @@ class RAGSystem:
 
         return formatted_answer
 
-
     def add_document(self, text: str):
         start_time = time.time()
-        print(f"Adding document, text length: {len(text)}")
-    
+        logger.info(f"Adding document, text length: {len(text)}")
+        
+        try:
+            if text.strip().startswith('[') and text.strip().endswith(']'):
+                json_data = json.loads(text)
+                if isinstance(json_data, list) and len(json_data) > 0 and isinstance(json_data[0], dict):
+                    if "content" in json_data[0]:
+                        text = json_data[0]["content"]
+                        logger.info(f"Extracted content from JSON array, new length: {len(text)}")
+            elif text.strip().startswith('{') and text.strip().endswith('}'):
+                json_data = json.loads(text)
+                if isinstance(json_data, dict) and "content" in json_data:
+                    text = json_data["content"]
+                    logger.info(f"Extracted content from JSON object, new length: {len(text)}")
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse text as JSON, continuing with original text")
+        except Exception as e:
+            logger.warning(f"Error processing text: {str(e)}")
+        
         chunks = preprocess_text(text)
-        print(f"Chunks created: {len(chunks)}")
-
+        logger.info(f"Chunks created: {len(chunks)}")
+        
         if not chunks:
             logger.warning("No chunks created from document")
             return
@@ -102,11 +128,11 @@ class RAGSystem:
         texts = [chunk["text"] for chunk in chunks_with_meta]
         metadatas = [{"source": chunk["source"]} for chunk in chunks_with_meta]
 
-        print(f"Adding {len(texts)} chunks to vectorstore")
+        logger.info(f"Adding {len(texts)} chunks to vectorstore")
         self.vectorstore.add_texts(texts, metadatas=metadatas)
 
         self.vectorstore.save_local("./faiss_index")
 
         end_time = time.time()
-        print(f"FAISS Indexing Time: {end_time - start_time:.2f} sec")
+        logger.info(f"FAISS Indexing Time: {end_time - start_time:.2f} sec")
         logger.info(f"Loaded web_content with {len(chunks)} chunks")
