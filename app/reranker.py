@@ -2,10 +2,11 @@ from typing import List
 from rank_bm25 import BM25Okapi
 import numpy as np
 import logging
+from app.config import CONFIG
 
 logger = logging.getLogger(__name__)
 
-def rerank_chunks(chunks: List[str], query: str, k: int = 5):
+def rerank_chunks(chunks: List[str], query: str, k: int = CONFIG["reranker"]["top_k"]):
     if not chunks:
         logger.warning("No chunks retrieved for reranking.")
         return []

@@ -23,7 +23,7 @@ def format_response(answer, chunks, metadatas):
     citations_text = "\n".join(citations)
     
     if citations:
-        formatted_response = f"Answer: {answer}\n\nCitations:\n{citations_text}"
+        formatted_response = f"Answer: {answer}\n" # \nCitations:\n{citations_text}
     else:
         formatted_response = answer
     

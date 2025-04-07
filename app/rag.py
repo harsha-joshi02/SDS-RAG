@@ -3,7 +3,7 @@ import os
 import time
 import logging
 import json
-from langchain_ollama import ChatOllama
+from groq import Groq
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from app.utils import load_sds, preprocess_text
@@ -11,21 +11,27 @@ from app.cache import get_cached_response, set_cached_response
 from app.reranker import rerank_chunks
 from app.formatter import format_response
 from app.prompt_template import prompt_template
+from dotenv import load_dotenv
+from app.config import CONFIG
+
+load_dotenv()
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 logging.basicConfig(level=logging.INFO, 
-                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class RAGSystem:
     def __init__(self, sds_paths: List[str]):
         self.sds_paths = sds_paths
-        self.llm = ChatOllama(model="llama3.2", temperature=0.0)
-        self.embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        self.embedding_model = HuggingFaceEmbeddings(model_name= CONFIG["embedding"]["model_name"])
 
-        if os.path.exists("./faiss_index"):
+        if os.path.exists(CONFIG["app"]["faiss_index_path"]):
             logger.info("Loading existing FAISS index...")
             self.vectorstore = FAISS.load_local(
-                "./faiss_index",
+                CONFIG["app"]["faiss_index_path"],
                 self.embedding_model,
                 allow_dangerous_deserialization=True
             )
@@ -62,7 +68,7 @@ class RAGSystem:
             logger.info("Using cached response")
             return cached
 
-        retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
+        retriever = self.vectorstore.as_retriever(search_kwargs={"k": CONFIG["retriever"]["search_k"]})
 
         docs = retriever.get_relevant_documents(question)
         chunk_texts = [doc.page_content for doc in docs]
@@ -84,17 +90,23 @@ class RAGSystem:
             retrieved_documents=context, query=question
         )
 
-        logger.info(f"Sending prompt to LLM, length: {len(formatted_prompt)}")
-        result = self.llm.invoke(formatted_prompt)
+        logger.info(f"Sending prompt to Groq API, length: {len(formatted_prompt)}")
+        response = self.client.chat.completions.create(
+            model=CONFIG["groq"]["model"], 
+            messages=[{"role": "user", "content": formatted_prompt}],
+            temperature=CONFIG["groq"]["temperature"],
+            max_tokens=CONFIG["groq"]["max_tokens"]
+        )
         end_time = time.time()
         logger.info(f"Total Query Time: {end_time - start_time:.2f} sec")
 
-        answer = result.content
+        answer = response.choices[0].message.content
         formatted_answer = format_response(answer, reranked_chunks, chunk_metadatas)
 
         set_cached_response(question, formatted_answer)
 
         return formatted_answer
+    
 
     def add_document(self, text: str):
         start_time = time.time()

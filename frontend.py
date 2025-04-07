@@ -1,9 +1,10 @@
 import streamlit as st
 import requests
-from typing import List
 import os
+from dotenv import load_dotenv
 
-API_URL = "http://localhost:8000"  # into .env
+load_dotenv()
+API_URL = os.getenv("API_URL")
 
 def upload_sds(files):
     if not files:
@@ -35,24 +36,23 @@ def submit_url(url: str):
         st.error(f"Error submitting URL: {str(e)}")
 
 def query_rag(question: str):
-    if not question:
-        st.warning("Please enter a question.")
-        return
     try:
-        response = requests.post(f"{API_URL}/query/?question={question}")
-        if response.status_code == 200:
-            result = response.json()
-            st.success("Query answered!")
-            st.markdown("### Answer")
-            st.write(result["answer"])
-        else:
-            st.error(f"Query failed: {response.text}")
+        with st.spinner("Thinking..."):
+            response = requests.post(f"{API_URL}/query/?question={question}")
+            if response.status_code == 200:
+                result = response.json()
+                return result["answer"]
+            else:
+                return f"Error: {response.text}"
     except Exception as e:
-        st.error(f"Error querying: {str(e)}")
+        return f"Error querying: {str(e)}"
 
 def main():
     st.title("Retrieval Augmented Generation System")
-    st.write("Upload Documents, submit URLs, or query the system.")
+    st.write("Upload Documents, submit URLs, or chat with the system.")
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
 
     tab1, tab2, tab3 = st.tabs(["Upload Document", "Submit URL", "Query"])
 
@@ -69,10 +69,23 @@ def main():
             submit_url(url)
 
     with tab3:
-        st.header("Ask a Question")
-        question = st.text_input("Enter your question")
-        if st.button("Submit Question"):
-            query_rag(question)
+        st.header("Chat with the System")
+
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        question = st.chat_input("Ask your question here...")
+        if question:
+            st.session_state.chat_history.append({"role": "user", "content": question})
+            with st.chat_message("user"):
+                st.markdown(question)
+
+            answer = query_rag(question)
+            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+            with st.chat_message("assistant"):
+                st.markdown(answer)
+    
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,39 @@
+app:
+  name: "RAG System"
+  upload_dir: "data"
+  faiss_index_path: "./faiss_index"
+  log_level: "INFO"
+  log_file: "rag_system.log"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  endpoint: "/query/"
+
+cache:
+  ttl_seconds: 3600
+
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+
+groq:
+  model: "llama-3.3-70b-versatile"
+  temperature: 0.0
+  max_tokens: 1024
+
+retriever:
+  search_k: 10
+
+reranker:
+  top_k: 5
+
+text_splitter:
+  chunk_size: 1000
+  chunk_overlap: 200
+
+formatter:
+  chunk_preview_length: 100
+
+frontend:
+  api_url: "http://localhost:8000"
+

@@ -3,7 +3,6 @@ from app.rag import RAGSystem
 from dotenv import load_dotenv
 import os
 import time
-import json
 import logging
 
 logger = logging.getLogger(__name__)

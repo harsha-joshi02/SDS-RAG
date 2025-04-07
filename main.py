@@ -6,6 +6,10 @@ import time
 import uvicorn
 from app.rag import RAGSystem
 import logging
+from dotenv import load_dotenv
+from app.config import CONFIG
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,9 +21,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+app = FastAPI(title = CONFIG["app"]["name"])
 
-UPLOAD_DIR = Path("data")
+UPLOAD_DIR = Path(CONFIG["app"]["upload_dir"])
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/upload-sds/")
@@ -67,5 +71,5 @@ async def query_rag(question: str = Query(...), sds_paths: Optional[List[str]] =
     return {"question": question, "answer": answer}
 
 if __name__ == "__main__":
-    logger.info("Starting RAG System server")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    logger.info(f"Starting {CONFIG['app']['name']} server")
+    uvicorn.run(app, host=CONFIG["api"]["host"], port=CONFIG["api"]["port"])

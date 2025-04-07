@@ -1,11 +1,10 @@
 from pypdf import PdfReader
 from docx import Document
-from typing import List
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import pandas as pd
 import time
 import pdfplumber
 import logging
+from app.config import CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +58,8 @@ def preprocess_text(text: str):
         return [text.strip()] if text.strip() else []
     
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800, 
-        chunk_overlap=100,
+        chunk_size=CONFIG["text_splitter"]["chunk_size"], 
+        chunk_overlap=CONFIG["text_splitter"]["chunk_overlap"],
     )
     chunks = text_splitter.split_text(text)
     
