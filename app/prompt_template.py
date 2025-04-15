@@ -1,6 +1,6 @@
 from langchain.prompts import PromptTemplate
 
-prompt_template = PromptTemplate(
+doc_prompt_template = PromptTemplate(
     input_variables=["retrieved_documents", "query"],
     template=(
         "You are an AI assistant specialized in answering questions from structured and unstructured documents, "
@@ -15,4 +15,19 @@ prompt_template = PromptTemplate(
         "**User Query:** {query}\n\n"
         "**Answer:**"
     ),  
+)
+
+web_prompt_template = PromptTemplate(
+    input_variables=["web_content", "query"],
+    template=(
+        "You are an AI assistant tasked with answering questions based on web search results.\n\n"
+        "Follow these rules:\n"
+        "- Summarize the relevant information from the provided web content.\n"
+        "- If the answer is **not found**, say: 'I couldn't find a definitive answer based on available web information.'\n"
+        "- Provide a concise and accurate response based only on the given web content.\n"
+        "- Do not make up information beyond what is provided.\n\n"
+        "**Web Content:**\n{web_content}\n\n"
+        "**User Query:** {query}\n\n"
+        "**Answer:**"
+    ),
 )

@@ -23,9 +23,16 @@ def format_response(answer, chunks, metadatas):
     citations_text = "\n".join(citations)
     
     if citations:
-        formatted_response = f"Answer: {answer}\n" # \nCitations:\n{citations_text}
+        formatted_response = f"Answer: {answer}\n\nCitations:\n{citations_text}"
     else:
         formatted_response = answer
     
     logger.info(f"Final formatted response length: {len(formatted_response)}")
     return formatted_response
+
+# agent 1: pdf(answer)
+# agent 2: tool calling agent (tavily, if answer not in document)
+# agent 3: evaluate the answer (faithfullness), (RAGAS, DeepEval, TruLens)
+# langgraph
+
+# evaluation

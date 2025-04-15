@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, Tuple
 import os
 import time
 import logging
 import json
+from rank_bm25 import BM25Okapi
 from groq import Groq
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -10,7 +11,7 @@ from app.utils import load_sds, preprocess_text
 from app.cache import get_cached_response, set_cached_response
 from app.reranker import rerank_chunks
 from app.formatter import format_response
-from app.prompt_template import prompt_template
+from app.prompt_template import doc_prompt_template
 from dotenv import load_dotenv
 from app.config import CONFIG
 
@@ -26,7 +27,7 @@ class RAGSystem:
     def __init__(self, sds_paths: List[str]):
         self.sds_paths = sds_paths
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.embedding_model = HuggingFaceEmbeddings(model_name= CONFIG["embedding"]["model_name"])
+        self.embedding_model = HuggingFaceEmbeddings(model_name=CONFIG["embedding"]["model_name"])
 
         if os.path.exists(CONFIG["app"]["faiss_index_path"]):
             logger.info("Loading existing FAISS index...")
@@ -61,12 +62,12 @@ class RAGSystem:
         vectorstore = FAISS.from_texts(texts, self.embedding_model, metadatas=metadatas)
         return vectorstore
 
-    def query(self, question: str):
+    def query(self, question: str) -> Tuple[str, float]:
         start_time = time.time()
         cached = get_cached_response(question)
         if cached:
             logger.info("Using cached response")
-            return cached
+            return cached, 1.0 
 
         retriever = self.vectorstore.as_retriever(search_kwargs={"k": CONFIG["retriever"]["search_k"]})
 
@@ -82,11 +83,17 @@ class RAGSystem:
         reranked_chunks = rerank_chunks(chunk_texts, question)
         if not reranked_chunks:
             logger.warning("No relevant chunks found after reranking")
-            return "The answer is not present in the given documents."
+            return "The answer is not present in the given documents.", 0.0
 
         context = "\n".join(reranked_chunks)
 
-        formatted_prompt = prompt_template.format(
+        tokenized_chunks = [chunk.split() for chunk in chunk_texts]
+        bm25 = BM25Okapi(tokenized_chunks)
+        tokenized_query = question.split()
+        scores = bm25.get_scores(tokenized_query)
+        confidence = max(scores) / (max(scores) + 1) if max(scores) > 0 else 0.0  
+
+        formatted_prompt = doc_prompt_template.format(
             retrieved_documents=context, query=question
         )
 
@@ -105,8 +112,7 @@ class RAGSystem:
 
         set_cached_response(question, formatted_answer)
 
-        return formatted_answer
-    
+        return formatted_answer, confidence
 
     def add_document(self, text: str):
         start_time = time.time()

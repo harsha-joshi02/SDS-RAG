@@ -37,3 +37,8 @@ formatter:
 frontend:
   api_url: "http://localhost:8000"
 
+agent:
+  confidence_threshold: 0.7
+  
+  
+  
