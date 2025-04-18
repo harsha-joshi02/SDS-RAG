@@ -4,10 +4,11 @@ from pathlib import Path
 import os
 import time
 import uvicorn
-from app.agent_coordinator import AgentCoordinator
 import logging
 from dotenv import load_dotenv
 from app.config import CONFIG
+from app.search import search_url
+from app.graph import run_agent_workflow 
 
 load_dotenv()
 
@@ -40,7 +41,6 @@ async def upload_sds(files: List[UploadFile] = File(...)):
 @app.post("/submit-url/")
 async def submit_url(url: str = Query(...)):
     logger.info(f"URL submission request: {url}")
-    from app.search import search_url
     result = search_url(url)
     return result
 
@@ -55,16 +55,16 @@ async def query_rag(question: str = Query(...), sds_paths: Optional[List[str]] =
 
     if not sds_paths:
         try:
-            coordinator = AgentCoordinator([])
-            if not coordinator.doc_agent.vectorstore or len(coordinator.doc_agent.vectorstore.docstore._dict) == 0:
+            from app.rag import RAGSystem
+            rag_system = RAGSystem([])
+            if not rag_system.vectorstore or len(rag_system.vectorstore.docstore._dict) == 0:
                 logger.warning("No data available for querying")
                 raise HTTPException(status_code=400, detail="No data available. Upload files or submit URLs first.")
         except Exception as e:
             logger.error(f"Error accessing FAISS: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Error accessing FAISS: {str(e)}")
 
-    coordinator = AgentCoordinator(sds_paths)
-    answer = coordinator.query(question)
+    answer = run_agent_workflow(question, sds_paths)
     end_time = time.time()
     logger.info(f"API Response Time: {end_time - start_time:.2f} sec")
 

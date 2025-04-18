@@ -21,7 +21,7 @@ class WebSearchAgent:
         logger.info(f"Web search for query: {query}")
 
         try:
-            response = self.tavily.search(query=query, max_results=5)
+            response = self.tavily.search(query=query, max_results=CONFIG["web_search"]["max_results"])
             results = response.get("results", [])
             logger.info(f"Retrieved {len(results)} web results")
         

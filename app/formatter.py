@@ -19,7 +19,7 @@ def format_response(answer, chunks, metadatas):
         except Exception as e:
             logger.error(f"Error formatting citation {i}: {str(e)}")
             citations.append(f"[Doc {i+1}] (Error formatting citation)")
-    
+
     citations_text = "\n".join(citations)
     
     if citations:
@@ -31,8 +31,6 @@ def format_response(answer, chunks, metadatas):
     return formatted_response
 
 # agent 1: pdf(answer)
-# agent 2: tool calling agent (tavily, if answer not in document)
+# agent 2: tool calling agent (tavily, if answer not in document) (citations)
 # agent 3: evaluate the answer (faithfullness), (RAGAS, DeepEval, TruLens)
 # langgraph
-
-# evaluation

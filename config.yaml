@@ -38,7 +38,10 @@ frontend:
   api_url: "http://localhost:8000"
 
 agent:
-  confidence_threshold: 0.7
+  confidence_threshold: 0.6
+  
+web_search:
+  max_results: 5
   
   
   

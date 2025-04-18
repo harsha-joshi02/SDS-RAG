@@ -1,3 +1,4 @@
+# rag-system/app/reranker.py
 from typing import List
 from rank_bm25 import BM25Okapi
 import numpy as np
@@ -7,16 +8,20 @@ from app.config import CONFIG
 logger = logging.getLogger(__name__)
 
 def rerank_chunks(chunks: List[str], query: str, k: int = CONFIG["reranker"]["top_k"]):
-    if not chunks:
-        logger.warning("No chunks retrieved for reranking.")
+    if not chunks or all(not chunk.strip() for chunk in chunks):
+        logger.warning("No valid chunks retrieved for reranking.")
         return []
 
     if not query.strip():
         logger.warning("Empty query. Returning original chunks.")
         return chunks[:k]
 
-    tokenized_chunks = [chunk.split() for chunk in chunks]
+    tokenized_chunks = [chunk.split() for chunk in chunks if chunk.strip()]
     
+    if not tokenized_chunks:
+        logger.warning("No valid tokenized chunks after processing.")
+        return []
+
     for i, tokens in enumerate(tokenized_chunks[:3]):
         logger.info(f"Chunk {i} token count: {len(tokens)}")
         if len(tokens) < 5:

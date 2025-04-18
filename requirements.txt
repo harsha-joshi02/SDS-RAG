@@ -16,3 +16,4 @@ python-docx
 pdfplumber
 groq
 pyyaml
+langgraph
