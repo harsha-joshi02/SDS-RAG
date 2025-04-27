@@ -15,19 +15,28 @@ def clear_data_folder():
                 print(f"Failed to delete {file_path}. Reason: {e}")
     else:
         os.makedirs(data_path)
-    print("Cleared data folder")
+    print('"data" has been cleared.')
 
 def delete_faiss_index_folder():
     faiss_path = "faiss_index"
     if os.path.exists(faiss_path):
         shutil.rmtree(faiss_path)
-        print("Deleted faiss_index folder")
+        print('"faiss_index" has been deleted.')
     else:
-        print("faiss_index folder does not exist")
+        print('"faiss_index" folder does not exist.')
+
+def delete_excel_data_sqlite():
+    sqlite_path = "excel_data.sqlite"
+    if os.path.exists(sqlite_path):
+        os.remove(sqlite_path)
+        print('"excel_data.sqlite" has been deleted.')
+    else:
+        print('"excel_data.sqlite" does not exist.')
 
 def cleanup_all():
     clear_data_folder()
     delete_faiss_index_folder()
+    delete_excel_data_sqlite()
 
 if __name__ == "__main__":
     cleanup_all()
