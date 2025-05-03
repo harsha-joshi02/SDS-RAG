@@ -188,10 +188,9 @@ class ExcelToSQLProcessor:
             
             sql_query = response.choices[0].message.content.strip()
             if sql_query.startswith("```sql"):
-                sql_query = sql_query[6:]  # Remove "```sql\n"
+                sql_query = sql_query[6:]  
             if sql_query.endswith("```"):
-                sql_query = sql_query[:-3]  # Remove trailing "```"
-
+                sql_query = sql_query[:-3]
             sql_query = sql_query.strip()
             
             if sql_query.startswith("ERROR:"):

@@ -29,8 +29,3 @@ def format_response(answer, chunks, metadatas):
     
     logger.info(f"Final formatted response length: {len(formatted_response)}")
     return formatted_response
-
-# agent 1: pdf(answer)
-# agent 2: tool calling agent (tavily, if answer not in document) (citations)
-# agent 3: evaluate the answer (faithfullness), (RAGAS, DeepEval, TruLens)
-# langgraph

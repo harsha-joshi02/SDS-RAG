@@ -3,27 +3,32 @@ from app.config import CONFIG
 
 cache = {}
 
-def get_cached_response(query: str):
-    entry = cache.get(query)
+def get_cached_response(query: str, query_type: str, context: dict = None) -> str:
+    cache_key = _create_cache_key(query, query_type, context)
+        
+    entry = cache.get(cache_key)
     if entry:
         response, timestamp = entry
         if time.time() - timestamp < CONFIG["cache"]["ttl_seconds"]:
             return response
         else:
-            del cache[query] 
+            del cache[cache_key] 
     return None
 
-def set_cached_response(query: str, response: str):
-    cache[query] = (response, time.time())
+def set_cached_response(query: str, response: str, query_type: str, context: dict = None):
+    cache_key = _create_cache_key(query, query_type, context)
+    cache[cache_key] = (response, time.time())
 
-# faithfullness
-# hallucination
-# answer_relevance
-# LangSmith
-# JSON OutputParser (Pydantic) 
+def _create_cache_key(query: str, query_type: str, context: dict = None) -> str:
+    if query_type not in ['document', 'sql', 'web']:
+        raise ValueError(f"Invalid query_type: {query_type}")
 
-# Agent: To interact with SQL databases 
-# Excel -> SQL table -> User query (natural language) -> SQL query -> retrieve answer
-# Drop down in the query tab. So that user can chat with the documents separately
-# Memory - Redis, LangChain
-# Multiple Tables
+    if query_type == 'document' and context and 'sds_paths' in context:
+        paths = ':'.join(sorted(context['sds_paths']))
+        return f"{query_type}:{query}:{paths}"
+    elif query_type == 'sql' and context and 'schema_name' in context:
+        return f"{query_type}:{query}:{context['schema_name']}"
+    elif query_type == 'web':
+        return f"{query_type}:{query}"
+    else:
+        return f"{query_type}:{query}"

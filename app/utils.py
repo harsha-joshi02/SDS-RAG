@@ -1,9 +1,9 @@
-from pypdf import PdfReader
 from docx import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import time
 import pdfplumber
 import logging
+import os
 from app.config import CONFIG
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def load_sds(file_path: str):
 
     end_time = time.time()
     logger.info(f"Document Processing Time: {end_time - start_time:.2f} sec")
-    logger.info(f"Extracted {len(text)} characters from document")
+    logger.info(f"Extracted {len(text)} characters from {os.path.basename(file_path)}")
     return text
 
 def preprocess_text(text: str):
@@ -72,4 +72,4 @@ def preprocess_text(text: str):
         logger.warning("Chunking failed, using full text as a single chunk")
         chunks = [text.strip()]
     
-    return chunks
+    return chunks    

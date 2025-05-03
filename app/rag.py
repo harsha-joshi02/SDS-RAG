@@ -28,17 +28,8 @@ class RAGSystem:
         self.sds_paths = sds_paths
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.embedding_model = HuggingFaceEmbeddings(model_name=CONFIG["embedding"]["model_name"])
-
-        if os.path.exists(CONFIG["app"]["faiss_index_path"]):
-            logger.info("Loading existing FAISS index...")
-            self.vectorstore = FAISS.load_local(
-                CONFIG["app"]["faiss_index_path"],
-                self.embedding_model,
-                allow_dangerous_deserialization=True
-            )
-        else:
-            logger.info("No FAISS index found, creating a new one...")
-            self.vectorstore = self._load_and_index_sds()
+        self.vectorstore = self._load_and_index_sds()
+        logger.info(f"Initialized RAGSystem with {len(self.sds_paths)} paths: {self.sds_paths}")
 
     def _load_and_index_sds(self):
         all_chunks = []
@@ -46,8 +37,10 @@ class RAGSystem:
             try:
                 text = load_sds(path)
                 chunks = preprocess_text(text)
-                chunks_with_meta = [{"text": chunk, "source": os.path.basename(path)} for chunk in chunks]
+                source = os.path.basename(path)
+                chunks_with_meta = [{"text": chunk, "source": source} for chunk in chunks]
                 all_chunks.extend(chunks_with_meta)
+                logger.info(f"Loaded {len(chunks)} chunks from {path}")
             except Exception as e:
                 logger.warning(f"Skipped {path} due to error: {str(e)}")
                 continue
@@ -60,30 +53,44 @@ class RAGSystem:
         metadatas = [{"source": chunk["source"]} for chunk in all_chunks]
 
         vectorstore = FAISS.from_texts(texts, self.embedding_model, metadatas=metadatas)
+        logger.info(f"Created FAISS index with {len(texts)} chunks")
         return vectorstore
 
     def query(self, question: str) -> Tuple[str, float]:
         start_time = time.time()
-        cached = get_cached_response(question)
+        # Check cache using query_type='document' and context with sds_paths
+        cached = get_cached_response(question, query_type="document", context={"sds_paths": self.sds_paths})
         if cached:
-            logger.info("Using cached response")
+            logger.info(f"Cache hit for question: '{question}' with paths: {self.sds_paths}")
             return cached, 1.0 
 
+        logger.info(f"Cache miss for question: '{question}' with paths: {self.sds_paths}")
         retriever = self.vectorstore.as_retriever(search_kwargs={"k": CONFIG["retriever"]["search_k"]})
 
         docs = retriever.get_relevant_documents(question)
-        chunk_texts = [doc.page_content for doc in docs]
-        chunk_metadatas = [doc.metadata for doc in docs]
+        expected_sources = [os.path.basename(path) for path in self.sds_paths]
+        filtered_docs = [doc for doc in docs if doc.metadata.get("source") in expected_sources]
         
-        logger.info(f"Retrieved {len(docs)} documents")
+        chunk_texts = [doc.page_content for doc in filtered_docs]
+        chunk_metadatas = [doc.metadata for doc in filtered_docs]
         
-        for i, doc in enumerate(docs[:3]):
-            logger.info(f"Document {i+1} preview: {doc.page_content[:100]}...")
+        logger.info(f"Retrieved {len(docs)} documents, filtered to {len(filtered_docs)} from sources: {expected_sources}")
+        
+        for i, doc in enumerate(filtered_docs[:3]):
+            logger.info(f"Filtered Document {i+1} (source: {doc.metadata.get('source')}): {doc.page_content[:100]}...")
+
+        if not filtered_docs:
+            logger.warning("No relevant documents found for the query in the specified sources")
+            answer = "The answer is not present in the given documents."
+            set_cached_response(question, answer, query_type="document", context={"sds_paths": self.sds_paths})
+            return answer, 0.0
 
         reranked_chunks = rerank_chunks(chunk_texts, question)
         if not reranked_chunks:
             logger.warning("No relevant chunks found after reranking")
-            return "The answer is not present in the given documents.", 0.0
+            answer = "The answer is not present in the given documents."
+            set_cached_response(question, answer, query_type="document", context={"sds_paths": self.sds_paths})
+            return answer, 0.0
 
         context = "\n".join(reranked_chunks)
 
@@ -110,7 +117,7 @@ class RAGSystem:
         answer = response.choices[0].message.content
         formatted_answer = format_response(answer, reranked_chunks, chunk_metadatas)
 
-        set_cached_response(question, formatted_answer)
+        set_cached_response(question, formatted_answer, query_type="document", context={"sds_paths": self.sds_paths})
 
         return formatted_answer, confidence
 
@@ -149,8 +156,6 @@ class RAGSystem:
         logger.info(f"Adding {len(texts)} chunks to vectorstore")
         self.vectorstore.add_texts(texts, metadatas=metadatas)
 
-        self.vectorstore.save_local("./faiss_index")
-
+        logger.info(f"Added web_content with {len(chunks)} chunks to temporary index")
         end_time = time.time()
-        logger.info(f"FAISS Indexing Time: {end_time - start_time:.2f} sec")
-        logger.info(f"Loaded web_content with {len(chunks)} chunks")
+        logger.info(f"Indexing Time: {end_time - start_time:.2f} sec")

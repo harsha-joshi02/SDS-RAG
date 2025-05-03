@@ -2,17 +2,15 @@ import streamlit as st
 import requests
 import os
 import pandas as pd
-import json
 from dotenv import load_dotenv
+from app.config import CONFIG
 
 st.markdown("""
 <style>
-    /* Main background color */
     .stApp {
         background-color: #000000;
     }
     
-    /* Text and headers - neon blue for headers, white for text */
     h1, h2, h3, h4 {
         color: #00BFFF !important;
     }
@@ -21,7 +19,6 @@ st.markdown("""
         color: #FFFFFF;
     }
     
-    /* Button styling - subtle glow on hover */
     .stButton > button {
         background-color: #00BFFF;
         color: #FFFFFF;
@@ -34,7 +31,6 @@ st.markdown("""
         box-shadow: 0 0 5px #00BFFF;
     }
     
-    /* File uploader styling - fix hover color */
     .stFileUploader > div[data-testid="stFileUploadDropzone"] {
         color: #FFFFFF;
     }
@@ -44,7 +40,6 @@ st.markdown("""
         color: #00BFFF !important;
     }
     
-    /* Make sure file upload browse button is neon blue and no reddish outline */
     .stFileUploader button[kind="secondary"] {
         background-color: #00BFFF !important;
         color: #FFFFFF !important;
@@ -62,7 +57,6 @@ st.markdown("""
         border: none !important;
     }
 
-    /* Style for tabs */
     .stTabs [data-baseweb="tab"] {
         color: #FFFFFF;
     }
@@ -71,7 +65,6 @@ st.markdown("""
         color: #00BFFF !important;
     }
     
-    /* Success/Error message styling */
     .stSuccess, .stInfo {
         background-color: rgba(0, 191, 255, 0.1) !important;
         color: #FFFFFF !important;
@@ -82,12 +75,10 @@ st.markdown("""
         color: #FFFFFF !important;
     }
     
-    /* Chat styling */
     .stChatMessage [data-testid="stChatMessageContent"] {
         color: #FFFFFF;
     }
     
-    /* Previously uploaded files */
     .file-uploaded {
         color: #00BFFF !important;
     }
@@ -107,7 +98,9 @@ def upload_sds(files):
         if response.status_code == 200:
             st.success("Files uploaded successfully!")
             st.json(response.json())
-            st.session_state.document_files = files  # Store in session_state
+            if "document_files" not in st.session_state:
+                st.session_state.document_files = []
+            st.session_state.document_files.extend(files) 
         else:
             st.error(f"Upload failed: {response.text}")
     except Exception as e:
@@ -116,7 +109,7 @@ def upload_sds(files):
 def upload_excel(file):
     if not file:
         st.warning("No file selected.")
-        return
+        return None, None
     
     try:
         files_data = {"file": (file.name, file.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
@@ -124,14 +117,38 @@ def upload_excel(file):
         
         if response.status_code == 200:
             result = response.json()
-            st.success(f"Excel file uploaded and processed successfully!")
+            st.success(f"Excel file uploaded successfully!")
             st.write(f"Created tables: {', '.join(result['tables_created'])}")
-            st.session_state.excel_file = file  # Store in session_state
+            st.session_state.excel_file = file   
             show_table_preview()
+            return file.name, result["tables_created"]
         else:
             st.error(f"Upload failed: {response.text}")
+            return None, None
     except Exception as e:
         st.error(f"Error uploading Excel file: {str(e)}")
+        return None, None
+
+def submit_schema(schema_name, file_name, tables):
+    if not schema_name:
+        st.warning("Please enter a schema name.")
+        return
+    st.write(f"Debug: Submitting schema '{schema_name}' for file '{file_name}' with tables: {tables}")
+    try:
+        schema_response = requests.post(
+            f"{API_URL}/set-schema/",
+            json={"schema_name": schema_name, "tables": tables, "file_name": file_name}
+        )
+        if schema_response.status_code == 200:
+            st.success(f"Schema '{schema_name}' set successfully!")
+            if "schemas" not in st.session_state:
+                st.session_state.schemas = {}
+            st.session_state.schemas[schema_name] = tables
+            #st.write(f"Debug: Current schemas in session state: {st.session_state.schemas}")
+        else:
+            st.error(f"Failed to set schema: {schema_response.text}")
+    except Exception as e:
+        st.error(f"Error submitting schema: {str(e)}")
 
 def show_table_preview():
     try:
@@ -177,10 +194,10 @@ def submit_url(url: str):
     except Exception as e:
         st.error(f"Error submitting URL: {str(e)}")
 
-def query_rag(question: str):
+def query_rag(question: str, doc_path: str):
     try:
         with st.spinner("Thinking..."):
-            response = requests.post(f"{API_URL}/query/?question={question}")
+            response = requests.post(f"{API_URL}/query/?question={question}&sds_paths={doc_path}")
             if response.status_code == 200:
                 result = response.json()
                 return result["answer"]
@@ -189,10 +206,10 @@ def query_rag(question: str):
     except Exception as e:
         return f"Error querying: {str(e)}"
 
-def query_sql(question: str):
+def query_sql(question: str, schema_name: str):
     try:
         with st.spinner("Analyzing data..."):
-            response = requests.post(f"{API_URL}/sql-query/?query={question}")
+            response = requests.post(f"{API_URL}/sql-query/?query={question}&schema_name={schema_name}")
             if response.status_code == 200:
                 result = response.json()
                 return result["response"]
@@ -200,6 +217,18 @@ def query_sql(question: str):
                 return f"Error: {response.text}"
     except Exception as e:
         return f"Error querying SQL: {str(e)}"
+
+def query_web(question: str):
+    try:
+        with st.spinner("Searching the web..."):
+            response = requests.post(f"{API_URL}/web-search/?question={question}")
+            if response.status_code == 200:
+                result = response.json()
+                return result["answer"]
+            else:
+                return f"Error: {response.text}"
+    except Exception as e:
+        return f"Error querying web: {str(e)}"
 
 def main():
     st.title("Retrieval Augmented Generation System")
@@ -210,6 +239,36 @@ def main():
     
     if "sql_chat_history" not in st.session_state:
         st.session_state.sql_chat_history = []
+    
+    if "web_chat_history" not in st.session_state:
+        st.session_state.web_chat_history = []
+    
+    if "document_files" not in st.session_state:
+        st.session_state.document_files = []
+    
+    if "schemas" not in st.session_state:
+        st.session_state.schemas = {}
+    
+    if "excel_upload_result" not in st.session_state:
+        st.session_state.excel_upload_result = None
+
+    with st.sidebar:
+        st.subheader("Upload Documents")
+        st.markdown("""
+        - Upload a PDF or DOCX file to process documents.
+        """)
+
+        st.subheader("Upload Tables")
+        st.markdown("""
+        - Upload an Excel file where each sheet contains one table.
+        - Tables are converted to SQL tables.
+        - Enter a schema name after uploading.
+        """)
+
+        st.subheader("Query")
+        st.markdown("""
+        - Select a Schema name, Document name, or Web Search to chat with the respective data source.
+        """)
 
     tab1, tab2, tab3 = st.tabs([
         "Upload", 
@@ -222,7 +281,7 @@ def main():
         file_type = st.selectbox("Select file type", ["Document", "Excel"])
 
         if file_type == "Document":
-            if "document_files" in st.session_state:
+            if st.session_state.document_files:
                 st.write("Previously uploaded documents:")
                 for uploaded_file in st.session_state.document_files:
                     st.markdown(f'<p class="file-uploaded">{uploaded_file.name}</p>', unsafe_allow_html=True)
@@ -247,7 +306,20 @@ def main():
                 key="excel_uploader"
             )
             if st.button("Upload Excel"):
-                upload_excel(excel_file)
+                file_name, tables = upload_excel(excel_file)
+                if file_name and tables:
+                    st.session_state.excel_upload_result = {"file_name": file_name, "tables": tables}
+            
+            if st.session_state.excel_upload_result:
+                st.write("Enter schema name for the uploaded Excel file:")
+                schema_name = st.text_input("Schema name:", key="schema_input")
+                if st.button("Submit Schema", key="submit_schema"):
+                    st.write(f"Debug: 'Submit Schema' button clicked")
+                    submit_schema(
+                        schema_name,
+                        st.session_state.excel_upload_result["file_name"],
+                        st.session_state.excel_upload_result["tables"]
+                    )
 
     with tab2:
         st.header("Submit a URL")
@@ -257,40 +329,58 @@ def main():
 
     with tab3:
         st.header("Query the System")
-        query_type = st.selectbox("Select query type", ["Chat with Documents", "Query Excel Data"])
+        #st.write(f"Debug: Current schemas in session state: {st.session_state.schemas}")
         
-        if query_type == "Chat with Documents":
-            for message in st.session_state.chat_history:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+        query_options = ["Web Search"]  
+        query_type_map = {"Web Search": {"type": "web", "value": None}}  
+        
+        for schema_name in st.session_state.schemas.keys():
+            query_options.append(f"Schema: {schema_name}")
+            query_type_map[f"Schema: {schema_name}"] = {"type": "schema", "value": schema_name}
+        
+        for doc_file in st.session_state.document_files:
+            doc_path = os.path.join(CONFIG["app"]["upload_dir"], doc_file.name)
+            query_options.append(f"Document: {doc_file.name}")
+            query_type_map[f"Document: {doc_file.name}"] = {"type": "document", "value": doc_path}
+        
+        if not query_options:
+            st.warning("No schemas, documents, or web search available. Please upload files or use web search.")
+            return
+        
+        selected_option = st.selectbox("Select data to query", query_options)
+        
+        query_type = query_type_map[selected_option]["type"]
+        query_value = query_type_map[selected_option]["value"]
+        
+        if query_type == "schema":
+            chat_history = st.session_state.sql_chat_history
+        elif query_type == "web":
+            chat_history = st.session_state.web_chat_history
+        else:
+            chat_history = st.session_state.chat_history
+        
+        for message in chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-            doc_question = st.chat_input("Ask about your documents...", key="doc_chat")
-            if doc_question:
-                st.session_state.chat_history.append({"role": "user", "content": doc_question})
-                with st.chat_message("user"):
-                    st.markdown(doc_question)
+        question = st.chat_input(f"Ask about {selected_option}...", key=f"chat_{selected_option}")
+        if question:
+            chat_history.append({"role": "user", "content": question})
+            with st.chat_message("user"):
+                st.markdown(question)
 
-                answer = query_rag(doc_question)
-                st.session_state.chat_history.append({"role": "assistant", "content": answer})
-                with st.chat_message("assistant"):
-                    st.markdown(answer)
-
-        elif query_type == "Query Excel Data":
-            for message in st.session_state.sql_chat_history:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
-
-            sql_question = st.chat_input("Ask about your data...", key="sql_chat")
-            if sql_question:
-                st.session_state.sql_chat_history.append({"role": "user", "content": sql_question})
-                with st.chat_message("user"):
-                    st.markdown(sql_question)
-
-                answer = query_sql(sql_question)
+            if query_type == "schema":
+                answer = query_sql(question, query_value)
                 st.session_state.sql_chat_history.append({"role": "assistant", "content": answer})
-                with st.chat_message("assistant"):
-                    st.markdown(answer)
+            elif query_type == "web":
+                answer = query_web(question)
+                st.session_state.web_chat_history.append({"role": "assistant", "content": answer})
+            else:
+                answer = query_rag(question, query_value)
+                st.session_state.chat_history.append({"role": "assistant", "content": answer})
+            
+            with st.chat_message("assistant"):
+                st.markdown(answer)
 
 if __name__ == "__main__":
     main()
-
