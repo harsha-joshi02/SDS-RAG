@@ -32,6 +32,19 @@ class RAGSystem:
         logger.info(f"Initialized RAGSystem with {len(self.sds_paths)} paths: {self.sds_paths}")
 
     def _load_and_index_sds(self):
+        """
+        Loads and indexes source data structures (SDS) by processing text from the given paths and creating a FAISS vector store.
+        The function processes the files at the paths specified in `self.sds_paths`, extracting chunks of text from each file and generating a FAISS index. 
+        If no chunks are successfully loaded, an empty FAISS index is created.
+        It also logs the number of chunks loaded and any errors encountered during the process.
+
+        Returns:
+            FAISS: A FAISS vector store containing the indexed text chunks with metadata, ready for efficient similarity search.
+
+        Raises:
+            Exception: If there are issues loading or processing any SDS paths, they are logged and skipped.
+        """
+
         all_chunks = []
         for path in self.sds_paths:
             try:
@@ -57,8 +70,23 @@ class RAGSystem:
         return vectorstore
 
     def query(self, question: str) -> Tuple[str, float]:
+        """
+        Handles the process of querying the document retrieval system, retrieving relevant documents, reranking them, and generating a response.
+        This function first checks if a cached response exists for the query. If a cache hit occurs, it returns the cached response with a confidence score of 1.0. 
+        If the query is not cached, it retrieves relevant documents from a FAISS vector store, filters the documents based on the sources specified, reranks them, and uses a language model (Groq API) to generate a final answer.
+        The function also logs the process, including cache hits, document retrieval, and response generation, and caches the generated answer for future use.
+
+        Parameters:
+            question (str): The query string that the user wants to ask.
+
+        Returns:
+            Tuple[str, float]: A tuple containing the formatted answer (as a string) and a confidence score (as a float). The confidence is based on the BM25 reranking score.
+
+        Raises:
+            Exception: In case of any errors in document retrieval, reranking, or response generation, appropriate logging is performed, and the function returns a fallback answer with a confidence score of 0.0.
+        """
+
         start_time = time.time()
-        # Check cache using query_type='document' and context with sds_paths
         cached = get_cached_response(question, query_type="document", context={"sds_paths": self.sds_paths})
         if cached:
             logger.info(f"Cache hit for question: '{question}' with paths: {self.sds_paths}")
@@ -122,6 +150,22 @@ class RAGSystem:
         return formatted_answer, confidence
 
     def add_document(self, text: str):
+        """
+        Processes and adds a document to the vector store by chunking the text and indexing it.
+        If the input text is in JSON format with a 'content' field, it extracts and uses the content. 
+        The text is then chunked and indexed in the vector store.
+
+        Parameters:
+            text (str): The document text to be added.
+
+        Returns:
+            None
+
+        Raises:
+            json.JSONDecodeError: If the text cannot be parsed as JSON.
+            Exception: For any other errors during processing or indexing.
+        """
+
         start_time = time.time()
         logger.info(f"Adding document, text length: {len(text)}")
         

@@ -4,91 +4,30 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 from app.config import CONFIG
+import logging
 
-st.markdown("""
-<style>
-    .stApp {
-        background-color: #000000;
-    }
-    
-    h1, h2, h3, h4 {
-        color: #00BFFF !important;
-    }
-    
-    p, div, span, label {
-        color: #FFFFFF;
-    }
-    
-    .stButton > button {
-        background-color: #00BFFF;
-        color: #FFFFFF;
-        border: none;
-    }
-    
-    .stButton > button:hover {
-        background-color: #00BFFF;
-        filter: brightness(110%);
-        box-shadow: 0 0 5px #00BFFF;
-    }
-    
-    .stFileUploader > div[data-testid="stFileUploadDropzone"] {
-        color: #FFFFFF;
-    }
-    
-    .stFileUploader > div[data-testid="stFileUploadDropzone"]:hover {
-        border-color: #00BFFF !important;
-        color: #00BFFF !important;
-    }
-    
-    .stFileUploader button[kind="secondary"] {
-        background-color: #00BFFF !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        outline: none !important;
-    }
-    
-    .stFileUploader button[kind="secondary"]:hover,
-    .stFileUploader button[kind="secondary"]:focus,
-    .stFileUploader button[kind="secondary"]:active {
-        background-color: #00BFFF !important;
-        filter: brightness(110%);
-        box-shadow: 0 0 5px #00BFFF;
-        outline: none !important;
-        border: none !important;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        color: #FFFFFF;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        color: #00BFFF !important;
-    }
-    
-    .stSuccess, .stInfo {
-        background-color: rgba(0, 191, 255, 0.1) !important;
-        color: #FFFFFF !important;
-    }
-    
-    .stError, .stWarning {
-        background-color: rgba(255, 99, 71, 0.1) !important;
-        color: #FFFFFF !important;
-    }
-    
-    .stChatMessage [data-testid="stChatMessageContent"] {
-        color: #FFFFFF;
-    }
-    
-    .file-uploaded {
-        color: #00BFFF !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("frontend.log")
+    ]
+)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 API_URL = os.getenv("API_URL")
 
 def upload_sds(files):
+    """
+    Uploads selected SDS files to the backend API and updates the session state with uploaded files.
+
+    Args:
+        files (list): List of uploaded file objects from Streamlit's file uploader.
+    """
+
     if not files:
         st.warning("No files selected.")
         return
@@ -100,13 +39,23 @@ def upload_sds(files):
             st.json(response.json())
             if "document_files" not in st.session_state:
                 st.session_state.document_files = []
-            st.session_state.document_files.extend(files) 
+            st.session_state.document_files.extend(files)
         else:
             st.error(f"Upload failed: {response.text}")
     except Exception as e:
         st.error(f"Error uploading files: {str(e)}")
 
 def upload_excel(file):
+    """
+    Uploads an Excel file to the backend API, displays the result in Streamlit, and updates session state.
+
+    Args:
+        file: The uploaded Excel file object from Streamlit.
+
+    Returns:
+        Tuple[str, list] or (None, None): File name and list of created tables if successful, otherwise None values.
+    """
+
     if not file:
         st.warning("No file selected.")
         return None, None
@@ -119,7 +68,7 @@ def upload_excel(file):
             result = response.json()
             st.success(f"Excel file uploaded successfully!")
             st.write(f"Created tables: {', '.join(result['tables_created'])}")
-            st.session_state.excel_file = file   
+            st.session_state.excel_file = file
             show_table_preview()
             return file.name, result["tables_created"]
         else:
@@ -130,10 +79,22 @@ def upload_excel(file):
         return None, None
 
 def submit_schema(schema_name, file_name, tables):
+    """
+    Submits a schema definition to the backend API and updates Streamlit session state.
+
+    Args:
+        schema_name (str): Name of the schema to be created.
+        file_name (str): Name of the Excel file associated with the schema.
+        tables (list): List of tables to include in the schema.
+
+    Returns:
+        None
+    """
+
     if not schema_name:
         st.warning("Please enter a schema name.")
         return
-    st.write(f"Debug: Submitting schema '{schema_name}' for file '{file_name}' with tables: {tables}")
+    logger.info(f"Submitting schema '{schema_name}' for file '{file_name}' with tables: {tables}")
     try:
         schema_response = requests.post(
             f"{API_URL}/set-schema/",
@@ -144,13 +105,21 @@ def submit_schema(schema_name, file_name, tables):
             if "schemas" not in st.session_state:
                 st.session_state.schemas = {}
             st.session_state.schemas[schema_name] = tables
-            #st.write(f"Debug: Current schemas in session state: {st.session_state.schemas}")
         else:
             st.error(f"Failed to set schema: {schema_response.text}")
     except Exception as e:
         st.error(f"Error submitting schema: {str(e)}")
 
 def show_table_preview():
+    """
+    Fetches and displays a preview of tables from the uploaded Excel file using the backend API.
+
+    Shows sample data and column metadata for each table in an expandable Streamlit UI.
+
+    Returns:
+        None
+    """
+
     try:
         response = requests.get(f"{API_URL}/excel-tables/")
         if response.status_code == 200:
@@ -163,7 +132,7 @@ def show_table_preview():
                 with st.expander(f"Table: {table_name} ({table_info['row_count']} rows)"):
                     if table_info['sample_data']:
                         df = pd.DataFrame(
-                            table_info['sample_data'], 
+                            table_info['sample_data'],
                             columns=table_info['columns']
                         )
                         st.write("Sample data:")
@@ -180,59 +149,89 @@ def show_table_preview():
     except Exception as e:
         st.error(f"Error retrieving table information: {str(e)}")
 
-def submit_url(url: str):
-    if not url:
-        st.warning("Please enter a URL.")
-        return
-    try:
-        response = requests.post(f"{API_URL}/submit-url/?url={url}")
-        if response.status_code == 200:
-            st.success("URL submitted successfully!")
-            st.json(response.json())
-        else:
-            st.error(f"URL submission failed: {response.text}")
-    except Exception as e:
-        st.error(f"Error submitting URL: {str(e)}")
+def query_rag(question: str, doc_path: str, evaluate_metrics: bool):
+    """
+    Sends a RAG query to the backend API and optionally evaluates response metrics.
 
-def query_rag(question: str, doc_path: str):
+    Args:
+        question (str): The user query.
+        doc_path (str): Path to the document(s) to retrieve context from.
+        evaluate_metrics (bool): Whether to evaluate the response using metrics like hallucination or precision.
+
+    Returns:
+        Tuple[str, dict, list]: A tuple containing the answer string, a dictionary of evaluation metrics, and a list of source documents.
+    """
+
     try:
         with st.spinner("Thinking..."):
-            response = requests.post(f"{API_URL}/query/?question={question}&sds_paths={doc_path}")
+            response = requests.post(f"{API_URL}/query/?question={question}&sds_paths={doc_path}&evaluate_metrics={evaluate_metrics}")
             if response.status_code == 200:
                 result = response.json()
-                return result["answer"]
+                logger.info(f"Received RAG query response: question={question}, answer={result['answer'][:50]}..., metrics={result['metrics']}")
+                return result["answer"], result.get("metrics", {}), result.get("sources", [])
             else:
-                return f"Error: {response.text}"
+                logger.error(f"RAG query failed: {response.text}")
+                return f"Error: {response.text}", {}, []
     except Exception as e:
-        return f"Error querying: {str(e)}"
+        logger.error(f"Error querying RAG: {str(e)}")
+        return f"Error querying: {str(e)}", {}, []
 
-def query_sql(question: str, schema_name: str):
+def query_sql(question: str, schema_name: str, evaluate_metrics: bool):
+    """
+    Sends a natural language query to the SQL agent backend and optionally evaluates the response.
+
+    Args:
+        question (str): The user's natural language question about the data.
+        schema_name (str): The schema to query within the SQL database.
+        evaluate_metrics (bool): Whether to evaluate the SQL response using metrics.
+
+    Returns:
+        Tuple[str, dict, list]: A tuple containing the query response, evaluation metrics (if any), and list of sources used.
+    """
+
     try:
         with st.spinner("Analyzing data..."):
-            response = requests.post(f"{API_URL}/sql-query/?query={question}&schema_name={schema_name}")
+            response = requests.post(f"{API_URL}/sql-query/?query={question}&schema_name={schema_name}&evaluate_metrics={evaluate_metrics}")
             if response.status_code == 200:
                 result = response.json()
-                return result["response"]
+                logger.info(f"Received SQL query response: question={question}, response={result['response'][:50]}...")
+                return result["response"], result.get("metrics", {}), result.get("sources", [])
             else:
-                return f"Error: {response.text}"
+                logger.error(f"SQL query failed: {response.text}")
+                return f"Error: {response.text}", {}, []
     except Exception as e:
-        return f"Error querying SQL: {str(e)}"
+        logger.error(f"Error querying SQL: {str(e)}")
+        return f"Error querying SQL: {str(e)}", {}, []
 
-def query_web(question: str):
+def query_web(question: str, evaluate_metrics: bool):
+    """
+    Queries the web using the given question and optionally evaluates the response.
+
+    Args:
+        question (str): The user's natural language query.
+        evaluate_metrics (bool): Whether to evaluate the generated answer using predefined metrics.
+
+    Returns:
+        Tuple[str, dict, list]: A tuple containing the generated answer, evaluation metrics (if any), and source URLs used.
+    """
+
     try:
         with st.spinner("Searching the web..."):
-            response = requests.post(f"{API_URL}/web-search/?question={question}")
+            response = requests.post(f"{API_URL}/web-search/?question={question}&evaluate_metrics={evaluate_metrics}")
             if response.status_code == 200:
                 result = response.json()
-                return result["answer"]
+                logger.info(f"Received web query response: question={question}, answer={result['answer'][:50]}..., metrics={result['metrics']}")
+                return result["answer"], result.get("metrics", {}), result.get("sources", [])
             else:
-                return f"Error: {response.text}"
+                logger.error(f"Web query failed: {response.text}")
+                return f"Error: {response.text}", {}, []
     except Exception as e:
-        return f"Error querying web: {str(e)}"
+        logger.error(f"Error querying web: {str(e)}")
+        return f"Error querying web: {str(e)}", {}, []
 
 def main():
     st.title("Retrieval Augmented Generation System")
-    st.write("Upload Documents/Excel files, submit URLs, or chat with the system.")
+    st.write("Upload Documents/Excel files or chat with the system.")
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
@@ -270,9 +269,8 @@ def main():
         - Select a Schema name, Document name, or Web Search to chat with the respective data source.
         """)
 
-    tab1, tab2, tab3 = st.tabs([
-        "Upload", 
-        "Submit URL", 
+    tab1, tab2 = st.tabs([
+        "Upload",
         "Query"
     ])
 
@@ -287,8 +285,8 @@ def main():
                     st.markdown(f'<p class="file-uploaded">{uploaded_file.name}</p>', unsafe_allow_html=True)
 
             uploaded_files = st.file_uploader(
-                "Choose PDF or DOCX files", 
-                type=["pdf", "docx"], 
+                "Choose PDF or DOCX files",
+                type=["pdf", "docx"],
                 accept_multiple_files=True,
                 key="doc_uploader"
             )
@@ -301,7 +299,7 @@ def main():
                 st.markdown(f'<p class="file-uploaded">{st.session_state.excel_file.name}</p>', unsafe_allow_html=True)
             
             excel_file = st.file_uploader(
-                "Choose Excel file", 
+                "Choose Excel file",
                 type=["xlsx", "xls"],
                 key="excel_uploader"
             )
@@ -314,7 +312,7 @@ def main():
                 st.write("Enter schema name for the uploaded Excel file:")
                 schema_name = st.text_input("Schema name:", key="schema_input")
                 if st.button("Submit Schema", key="submit_schema"):
-                    st.write(f"Debug: 'Submit Schema' button clicked")
+                    logger.info(f"'Submit Schema' button clicked for schema: {schema_name}")
                     submit_schema(
                         schema_name,
                         st.session_state.excel_upload_result["file_name"],
@@ -322,17 +320,12 @@ def main():
                     )
 
     with tab2:
-        st.header("Submit a URL")
-        url = st.text_input("Enter URL (e.g., https://example.com)")
-        if st.button("Submit URL"):
-            submit_url(url)
-
-    with tab3:
         st.header("Query the System")
-        #st.write(f"Debug: Current schemas in session state: {st.session_state.schemas}")
         
-        query_options = ["Web Search"]  
-        query_type_map = {"Web Search": {"type": "web", "value": None}}  
+        evaluate_metrics = st.toggle("Show Evaluation Metrics", value=False, key="evaluate_metrics_toggle")
+        
+        query_options = ["Web Search"]
+        query_type_map = {"Web Search": {"type": "web", "value": None}}
         
         for schema_name in st.session_state.schemas.keys():
             query_options.append(f"Schema: {schema_name}")
@@ -361,7 +354,39 @@ def main():
         
         for message in chat_history:
             with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+                if message["role"] == "user":
+                    st.markdown(message["content"])
+                else:
+                    answer = message["content"]
+                    citations = ""
+                    if "Citations:" in answer:
+                        answer_parts = answer.split("Citations:", 1)
+                        answer = answer_parts[0].strip()
+                        citations = answer_parts[1].strip()
+                    st.markdown(answer)
+                    
+                    if evaluate_metrics and "metrics" in message and message["metrics"]:
+                        with st.expander("Evaluation Metrics"):
+                            metrics = message["metrics"]
+                            logger.info(f"Rendering metrics for message: {metrics}")
+                            metrics_df = pd.DataFrame([
+                                {"Metric": "Hallucination", "Value": f"{metrics.get('hallucination', 0.0):.2f}"},
+                                {"Metric": "Context Precision", "Value": f"{metrics.get('context_precision', 0.0):.2f}"}
+                            ])
+                            st.markdown('<div class="metrics-table">', unsafe_allow_html=True)
+                            st.table(metrics_df.to_dict('records'))
+                            st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    sources = message.get("sources", [])
+                    if citations or sources:
+                        with st.expander("Citations and Sources"):
+                            if citations:
+                                st.markdown("**Citations:**")
+                                st.markdown(citations)
+                            if sources:
+                                st.markdown("**Web Sources:**")
+                                for source in sources:
+                                    st.markdown(f"- [{source}]({source})")
 
         question = st.chat_input(f"Ask about {selected_option}...", key=f"chat_{selected_option}")
         if question:
@@ -370,17 +395,49 @@ def main():
                 st.markdown(question)
 
             if query_type == "schema":
-                answer = query_sql(question, query_value)
-                st.session_state.sql_chat_history.append({"role": "assistant", "content": answer})
+                answer, metrics, sources = query_sql(question, query_value, evaluate_metrics)
+                citations = ""
             elif query_type == "web":
-                answer = query_web(question)
-                st.session_state.web_chat_history.append({"role": "assistant", "content": answer})
+                answer, metrics, sources = query_web(question, evaluate_metrics)
+                citations = ""
             else:
-                answer = query_rag(question, query_value)
-                st.session_state.chat_history.append({"role": "assistant", "content": answer})
+                answer, metrics, sources = query_rag(question, query_value, evaluate_metrics)
+                citations = ""
+                if "Citations:" in answer:
+                    answer_parts = answer.split("Citations:", 1)
+                    answer = answer_parts[0].strip()
+                    citations = answer_parts[1].strip()
+            
+            chat_history.append({
+                "role": "assistant",
+                "content": answer + ("\n\nCitations:\n" + citations if citations else ""),
+                "metrics": metrics,
+                "sources": sources
+            })
             
             with st.chat_message("assistant"):
                 st.markdown(answer)
+                logger.info(f"Displaying new answer with metrics: {metrics}")
+                
+                if evaluate_metrics and metrics:
+                    with st.expander("Evaluation Metrics"):
+                        metrics_df = pd.DataFrame([
+                            {"Metric": "Hallucination", "Value": f"{metrics.get('hallucination', 0.0):.2f}"},
+                            {"Metric": "Context Precision", "Value": f"{metrics.get('context_precision', 0.0):.2f}"}
+                        ])
+                        st.markdown('<div class="metrics-table">', unsafe_allow_html=True)
+                        st.table(metrics_df.to_dict('records'))
+                        st.markdown('</div>', unsafe_allow_html=True)
+                
+                if citations or sources:
+                    with st.expander("Citations and Sources"):
+                        if citations:
+                            st.markdown("**Citations:**")
+                            st.markdown(citations)
+                        if sources:
+                            st.markdown("**Web Sources:**")
+                            for source in sources:
+                                st.markdown(f"- [{source}]({source})")
 
 if __name__ == "__main__":
     main()

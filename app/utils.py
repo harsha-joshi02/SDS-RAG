@@ -9,6 +9,24 @@ from app.config import CONFIG
 logger = logging.getLogger(__name__)
 
 def load_sds(file_path: str):
+    """
+    Loads and extracts text (including tables) from a PDF or DOCX file.
+
+    Supports:
+    - PDFs: Extracts text and tables from all pages.
+    - DOCX: Extracts paragraphs and table contents.
+
+    Args:
+        file_path (str): Path to the document file.
+
+    Returns:
+        str: Combined extracted text.
+
+    Raises:
+        ValueError: If the file format is unsupported.
+        Exception: If any error occurs during processing.
+    """
+
     start_time = time.time()
     text = ""
 
@@ -53,6 +71,16 @@ def load_sds(file_path: str):
     return text
 
 def preprocess_text(text: str):
+    """
+    Splits input text into smaller chunks using recursive character-based splitting.
+
+    Args:
+        text (str): The input text to be chunked.
+
+    Returns:
+        List[str]: A list of text chunks. If text is too short, returns a single-element list.
+    """
+
     if not text or len(text.strip()) < 100:
         logger.warning("Very short or empty text provided for chunking")
         return [text.strip()] if text.strip() else []

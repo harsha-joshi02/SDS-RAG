@@ -1,15 +1,12 @@
 fastapi
 uvicorn
 python-multipart
-streamlit
-pypdf       
+streamlit      
 langchain
 langchain-community
-langchain-ollama
 tavily-python
 sentence-transformers
 faiss-cpu
-redis
 rank_bm25
 python-dotenv
 python-docx
@@ -17,3 +14,7 @@ pdfplumber
 groq
 pyyaml
 langgraph
+opik
+pandas
+numpy
+litellm

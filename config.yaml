@@ -18,7 +18,7 @@ embedding:
 
 groq:
   model: "llama-3.3-70b-versatile"
-  temperature: 0.5
+  temperature: 0.0
   max_tokens: 1024
 
 retriever:
@@ -38,16 +38,17 @@ frontend:
   api_url: "http://localhost:8000"
 
 agent:
-  confidence_threshold: 0.6
-  
+  confidence_threshold: 0.55
+
 web_search:
   max_results: 5
-  
+
 excel_processing:
   chunk_size: 5000
   max_rows_preview: 10
   table_name_prefix: "excel_"
   sql_model: "llama-3.3-70b-versatile"
   sql_temp: 0.1
-  
-  
+
+evaluation:
+  output_dir: "evaluations"

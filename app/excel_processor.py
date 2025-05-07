@@ -14,6 +14,16 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 def detect_table_types(df):
+    """
+    Detects and maps the data types of DataFrame columns to corresponding SQL data types.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame whose column types are to be analyzed.
+
+    Returns:
+        dict: A dictionary mapping column names to SQL-compatible data types (e.g., INTEGER, REAL, DATETIME, TEXT).
+    """
+
     type_mapping = {}
     
     for column in df.columns:
@@ -36,6 +46,19 @@ class ExcelToSQLProcessor:
         self.table_schemas = {}
     
     def process_excel_file(self, file_path: str) -> List[str]:
+        """
+        Processes an Excel file by reading its sheets, sanitizing data, and creating corresponding SQL tables.
+
+        Args:
+            file_path (str): Path to the Excel file to be processed.
+
+        Returns:
+            List[str]: A list of table names created from the Excel sheets.
+
+        Raises:
+            Exception: If any error occurs during file processing or table creation.
+        """
+
         logger.info(f"Processing Excel file: {file_path}")
         start_time = time.time()
         
@@ -69,12 +92,34 @@ class ExcelToSQLProcessor:
             raise
     
     def _sanitize_table_name(self, name: str) -> str:
+        """
+        Sanitizes a string to create a valid SQL table name.
+
+        Args:
+            name (str): The original table name (e.g., sheet name from Excel).
+
+        Returns:
+            str: A sanitized, lowercase table name containing only alphanumeric characters and underscores,
+                prefixed with 'table_' if it doesn't start with a letter or underscore.
+        """
+
         sanitized = ''.join(c if c.isalnum() or c == '_' else '_' for c in name.replace(' ', '_'))
         if sanitized and not (sanitized[0].isalpha() or sanitized[0] == '_'):
             sanitized = 'table_' + sanitized
         return sanitized.lower()
     
     def _sanitize_column_name(self, name: str) -> str:
+        """
+        Sanitizes a string to create a valid SQL column name.
+
+        Args:
+            name (str): The original column name, which may be a string, integer, or float.
+
+        Returns:
+            str: A sanitized, lowercase column name containing only alphanumeric characters and underscores,
+                prefixed with 'col_' if it doesn't start with a letter or underscore.
+        """
+
         if isinstance(name, (int, float)):
             return f"col_{name}"
         sanitized = ''.join(c if c.isalnum() or c == '_' else '_' for c in str(name).replace(' ', '_'))
@@ -83,6 +128,17 @@ class ExcelToSQLProcessor:
         return sanitized.lower()
     
     def _create_sql_table(self, df: pd.DataFrame, table_name: str) -> None:
+        """
+        Creates a SQL table from a DataFrame, mapping columns to appropriate SQL data types.
+
+        Args:
+            df (pd.DataFrame): The DataFrame to be converted into a SQL table.
+            table_name (str): The name of the table to be created in the SQL database.
+
+        Raises:
+            Exception: If an error occurs while creating the table or executing the SQL commands.
+        """
+
         try:
             type_mapping = detect_table_types(df)
             column_defs = []
@@ -101,6 +157,20 @@ class ExcelToSQLProcessor:
             raise
     
     def get_table_info(self) -> Dict[str, Any]:
+        """
+        Retrieves information about all tables in the database, including columns, data types, sample rows, and row counts.
+
+        Returns:
+            Dict[str, Any]: A dictionary where each key is a table name and each value is another dictionary containing:
+                - "columns": List of column names.
+                - "types": List of data types for each column.
+                - "sample_data": A list of sample rows (up to 3 rows).
+                - "row_count": The total number of rows in the table.
+                
+        Raises:
+            Exception: If an error occurs while querying the database.
+        """
+
         tables = {}
         try:
             cursor = self.conn.cursor()
@@ -127,6 +197,19 @@ class ExcelToSQLProcessor:
             return {}
     
     def _get_row_count(self, table_name: str) -> int:
+        """
+        Gets the row count for a specified table in the database.
+
+        Args:
+            table_name (str): The name of the table for which to count the rows.
+
+        Returns:
+            int: The number of rows in the specified table. Returns 0 if an error occurs.
+            
+        Raises:
+            Exception: If an error occurs while querying the database.
+        """
+
         try:
             cursor = self.conn.cursor()
             cursor.execute(f"SELECT COUNT(*) FROM '{table_name}';")
@@ -136,6 +219,19 @@ class ExcelToSQLProcessor:
             return 0
     
     def translate_to_sql(self, natural_language_query: str) -> str:
+        """
+        Translates a natural language query into a valid SQL query based on the database schema.
+
+        Args:
+            natural_language_query (str): The natural language query to be translated into SQL.
+
+        Returns:
+            str: The translated SQL query, or an error message if the translation fails.
+
+        Raises:
+            Exception: If an error occurs during the translation process, including LLM issues or database retrieval errors.
+        """
+
         start_time = time.time()
         logger.info(f"Translating query to SQL: {natural_language_query}")
     
@@ -208,6 +304,21 @@ class ExcelToSQLProcessor:
             return f"ERROR: Failed to translate query - {str(e)}"
     
     def execute_sql_query(self, sql_query: str) -> Tuple[List[Dict[str, Any]], str]:
+        """
+        Executes a SQL query on the database and returns the results as a list of dictionaries.
+
+        Args:
+            sql_query (str): The SQL query to be executed.
+
+        Returns:
+            Tuple[List[Dict[str, Any]], str]: A tuple containing:
+                - A list of dictionaries where each dictionary represents a row in the result set with column names as keys.
+                - An empty string if the query executed successfully, or an error message if the query failed.
+
+        Raises:
+            Exception: If an error occurs during query execution, such as a database or SQL syntax error.
+        """
+
         start_time = time.time()
         logger.info(f"Executing SQL query: {sql_query}")
         
@@ -240,6 +351,22 @@ class ExcelToSQLProcessor:
             return [], error_message
     
     def format_result_with_llm(self, natural_language_query: str, sql_query: str, results: List[Dict[str, Any]], error: str = "") -> str:
+        """
+        Formats the results of a SQL query into a natural language response using an LLM.
+
+        Args:
+            natural_language_query (str): The original natural language query from the user.
+            sql_query (str): The SQL query generated from the natural language query.
+            results (List[Dict[str, Any]]): The result set returned from executing the SQL query.
+            error (str, optional): An error message if the SQL query failed. Defaults to an empty string.
+
+        Returns:
+            str: A natural language response based on the results of the SQL query, or an explanation in case of errors or empty results.
+
+        Raises:
+            Exception: If an error occurs during the response formatting process, such as issues with the LLM API or data handling.
+        """
+
         start_time = time.time()
         
         if error:
@@ -311,6 +438,19 @@ class ExcelToSQLProcessor:
                 return f"Found {len(results)} results, but couldn't format the response."
     
     def process_natural_language_query(self, query: str) -> str:
+        """
+        Processes a natural language query by translating it to SQL, executing the query, and formatting the results.
+
+        Args:
+            query (str): The natural language query to be processed.
+
+        Returns:
+            str: A natural language response generated by the LLM based on the SQL query results, or an error explanation if any issues occurred.
+
+        Raises:
+            Exception: If any error occurs during the query translation, execution, or response formatting.
+        """
+
         sql_query = self.translate_to_sql(query)
         results, error = self.execute_sql_query(sql_query)
         response = self.format_result_with_llm(query, sql_query, results, error)

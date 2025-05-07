@@ -3,6 +3,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 def format_response(answer, chunks, metadatas):
+    """
+    Formats the response by including the answer along with citations from the provided chunks and metadata.
+
+    Args:
+        answer (str): The answer generated from the query.
+        chunks (List[str]): A list of text chunks relevant to the query.
+        metadatas (List[Dict[str, str]]): Metadata associated with each chunk, typically containing the source of the chunk.
+
+    Returns:
+        str: The formatted response, which includes the answer and the citations from the chunks.
+
+    Raises:
+        Exception: If an error occurs during the formatting of the citations.
+    """
+
     logger.info(f"Formatting response with {len(chunks)} chunks and {len(metadatas)} metadatas")
     
     if len(metadatas) < len(chunks):

@@ -7,6 +7,22 @@ from app.config import CONFIG
 logger = logging.getLogger(__name__)
 
 def rerank_chunks(chunks: List[str], query: str, k: int = CONFIG["reranker"]["top_k"]):
+    """
+    Reranks document chunks based on relevance to the query using BM25.
+
+    This function tokenizes the chunks and the query, calculates BM25 scores, and returns the top-k most relevant chunks.
+
+    Parameters:
+        chunks (List[str]): The list of document chunks to be ranked.
+        query (str): The query to compare against the chunks.
+        k (int): The number of top chunks to return (default is CONFIG["reranker"]["top_k"]).
+
+    Returns:
+        List[str]: The top-k most relevant chunks.
+
+    Logs warnings if no valid chunks or tokens are found, or if BM25 scores are low.
+    """
+
     if not chunks or all(not chunk.strip() for chunk in chunks):
         logger.warning("No valid chunks retrieved for reranking.")
         return []
