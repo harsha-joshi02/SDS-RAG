@@ -10,8 +10,6 @@ import opik #type: ignore
 import importlib 
 import inspect
 from sentence_transformers import SentenceTransformer, util
-import torch
-from collections import Counter
 
 logger = logging.getLogger(__name__)
 

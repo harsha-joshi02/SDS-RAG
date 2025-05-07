@@ -14,8 +14,8 @@ This is a Retrieval-Augmented Generation (RAG) system designed to process docume
 # Installation and Setup
 
 1. **Clone the Repository** <br>
-`git clone https://github.com/your-username/your-repo.git` <br>
-`cd repo` <br>
+`git clone https://github.com/harsha-joshi02/SDS-RAG.git` <br>
+`cd SDS-RAG` <br>
 
 2. **Set Up a Virtual Environment** <br>
 `python3 -m venv venv` <br>
