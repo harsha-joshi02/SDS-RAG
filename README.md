@@ -115,25 +115,65 @@ Ensure the config.yaml file is properly configured. Default settings include: <b
 * **Makefile**: Commands for running and cleaning the system.
 
 
-# Dependencies
+## Dependencies
 
-* **faiss-cpu**  (vector store for similarity search in RAG pipelines)  <br>
-* **fastapi**  (backend web framework for building APIs)  <br>
-* **groq**  (LLM API provider used for generating responses)  <br>
-* **langchain**  (framework for building LLM-based applications)  <br>
-* **langchain-community**  (community-contributed integrations for LangChain)  <br>
-* **langgraph**  (stateful, agentic orchestration framework built on LangChain)  <br>
-* **litellm**  (unified interface for using various LLM providers)  <br>
-* **numpy**  (numerical computing library; used for array manipulation)  <br>
-* **opik** (evaluation framework for checking hallucination, faithfulness, etc.)  <br>
-* **pandas**  (data manipulation and analysis library; especially for tables/Excel)  <br>
-* **pdfplumber**  (extracts text and metadata from PDF files)  <br>
-* **python-docx**  (extracts text and formatting from DOCX files)  <br>
-* **python-dotenv**  (loads environment variables from a .env file)  <br>
-* **python-multipart**  (required by FastAPI to handle file uploads via form data)  <br>
-* **pyyaml**  (parses and writes YAML files)  <br>
-* **rank_bm25**  (implements BM25 algorithm for keyword-based text retrieval)  <br>
-* **sentence-transformers**  (embeddings model used for semantic search in RAG)  <br>
-* **streamlit**  (frontend framework for interactive web apps)  <br>
-* **tavily-python**  (API client for web search using Tavily)  <br>
-* **uvicorn**  (ASGI server to run FastAPI applications)  <br>
+- `faiss-cpu`  
+  Vector store for similarity search in RAG pipelines
+
+- `fastapi`  
+  Backend web framework for building APIs
+
+- `groq`  
+  LLM API provider used for generating responses
+
+- `langchain`  
+  Framework for building LLM-based applications
+
+- `langchain-community`  
+  Community-contributed integrations for LangChain
+
+- `langgraph`  
+  Stateful, agentic orchestration framework built on LangChain
+
+- `litellm`  
+  Unified interface for using various LLM providers
+
+- `numpy`  
+  Numerical computing library; used for array manipulation
+
+- `opik`  
+  Evaluation framework for checking hallucination, faithfulness, etc.
+
+- `pandas`  
+  Data manipulation and analysis library; especially for tables/Excel
+
+- `pdfplumber`  
+  Extracts text and metadata from PDF files
+
+- `python-docx`  
+  Extracts text and formatting from DOCX files
+
+- `python-dotenv`  
+  Loads environment variables from a `.env` file
+
+- `python-multipart`  
+  Required by FastAPI to handle file uploads via form data
+
+- `pyyaml`  
+  Parses and writes YAML files
+
+- `rank_bm25`  
+  Implements BM25 algorithm for keyword-based text retrieval
+
+- `sentence-transformers`  
+  Embeddings model used for semantic search in RAG
+
+- `streamlit`  
+  Frontend framework for interactive web apps
+
+- `tavily-python`  
+  API client for web search using Tavily
+
+- `uvicorn`  
+  ASGI server to run FastAPI applications
+
