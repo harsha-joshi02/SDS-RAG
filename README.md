@@ -14,15 +14,16 @@ This is a Retrieval-Augmented Generation (RAG) system designed to process docume
 # Installation and Setup
 
 1. Clone the Repository <br>
-git clone https://github.com/your-username/your-repo.git <br>
-cd repo <br>
+`git clone https://github.com/your-username/your-repo.git` <br>
+`cd repo` <br>
 
 2. Set Up a Virtual Environment <br>
-python3 -m venv venv <br>
-source venv/bin/activate  # On Windows: venv/Scripts/activate <br>  
+python3 -m venv venv` <br>
+MacOS: `source venv/bin/activate` <br>
+Windows: `venv/Scripts/activate` <br>  
 
 3. Install Dependencies <br>
-pip install -r requirements.txt <br>
+`pip install -r requirements.txt` <br>
 
 4. Set Up Environment Variables <br>
 Create a .env file in the project root and add the following: <br>
@@ -42,17 +43,17 @@ Ensure the config.yaml file is properly configured. Default settings include: <b
 # Running the System
 
 1. Clean Up Previous Data (Optional) <br>
-make cleanup <br>
+`make cleanup` <br>
 
 2. Run the Backend <br>
-make run_backend <br>
+`make run_backend` <br>
 This starts the FastAPI server on http://localhost:8000 <br>
 
 3. Run the Frontend <br>
-make run_frontend.py <br>
+`make run_frontend` <br>
 
 4. Run Both (Backend and Frontend) <br>
-make all <br>
+`make all` <br>
 This performs cleanup, starts the backend, and launches the frontend. <br>
 
 
